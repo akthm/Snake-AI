@@ -18,6 +18,10 @@ import matplotlib.pyplot as plot
 import numpy as np
 from datetime import datetime
 
+GRID_SIZE = 20
+
+WINDOW_SIZE = 500
+
 RED = (255, 0, 0)
 
 file = "results.txt"
@@ -26,8 +30,8 @@ file = "results.txt"
 # ------------------------------------------------- Code setting up the basics of the snake game
 
 class cube(object):
-    rows = 20
-    w = 500
+    rows = GRID_SIZE
+    w = WINDOW_SIZE
 
     def __init__(self, start, dirnx=1, dirny=0, color=(255, 0, 0)):
         self.pos = start
@@ -180,6 +184,7 @@ class snake(object):
         self.walls = self.body
         self.score = 0
 
+
     def addCube(self):
         tail = self.body[-1]
         dx, dy = tail.dirnx, tail.dirny
@@ -242,7 +247,7 @@ class snake(object):
         for movesX in possible_moves:
             nextX = x + movesX  # x will move, y will stay the same
             nextY = y
-            if nextX < 0 or nextX > 19:  # make sure we don't go out of bounds
+            if nextX < 0 or nextX > GRID_SIZE - 1:  # make sure we don't go out of bounds
                 continue
             nextState = nextX, nextY
             if nextState not in wallPositions:
@@ -349,8 +354,8 @@ startState = 0
 # --------------------------------------------------------------------- Running the game normally
 def main():
     global width, rows, s, snack, startState
-    width = 500
-    rows = 20
+    width = WINDOW_SIZE
+    rows = GRID_SIZE
     win = pygame.display.set_mode((width, width))
     startState = (10, 10)
     # s = snake((255, 0, 0), (10, 10))
@@ -400,8 +405,8 @@ def main():
 def feedDirections(s):
     """feedDirections demonstrates how we can input a list of directions to feed into the game"""
     global width, rows, snack
-    width = 500
-    rows = 20
+    width = WINDOW_SIZE
+    rows = GRID_SIZE
     win = pygame.display.set_mode((width, width))
     s = snake((255, 0, 0), (10, 10))
     snack = cube(randomSnack(rows, s), color=(0, 255, 0))
@@ -421,7 +426,7 @@ def feedDirections(s):
 
 # DEFINE CONSTANTS
 
-START_POS = (0, 0)
+START_POS = (2, 2)
 FOOD_POS = []
 
 
@@ -438,6 +443,18 @@ def foodPos(obstacle_pos=None):
         # print(food)
         FOOD_POS.append(food)
 # FOOD_POS = [(10, 0), (0, 10), (10, 0), (0, 10), (10, 0)]
+
+
+def generate_walls(obs=None):
+    wall = []
+    if obs:
+        wall += obs
+    for i in range(GRID_SIZE):
+        wall.append((i, 0))
+        wall.append((0, i))
+        wall.append((GRID_SIZE - 1, i))
+        wall.append((i, GRID_SIZE - 1))
+    return wall
 
 
 def generate_obstacles_pos(num):
@@ -488,8 +505,8 @@ def aStar_search(s, i, slow, heuristic = nullHeuristic):
             s.moveAuto(action)
             redrawWindow(win, s)
 
-    width = 500
-    rows = 20
+    width = WINDOW_SIZE
+    rows = GRID_SIZE
     win = pygame.display.set_mode((width, width))
     startState = START_POS
     snack = cube(FOOD_POS[i], color=(0, 255, 0))
@@ -530,21 +547,31 @@ def aStar_search(s, i, slow, heuristic = nullHeuristic):
 # --------------------------------------------------------------------- End of A Star
 
 
-# runMultiple(5)
-# showExample()
+# use main() for human gameplay
 if __name__ == '__main__':
-    obstacle_pos = generate_obstacles_pos(4)
-    foodPos(obstacle_pos)
+    scores = {"astar":[], "ucs":[]}
     mySnake = snake(RED, START_POS)
-    mySnake.set_obstacles(obstacle_pos)
-    is_done = False
-    for i in range(0, len(FOOD_POS)):
-        aStar_search(mySnake, i, False)
-
-    print("ucs score " + str(mySnake.score))
-    mySnake.reset(START_POS)
-    for i in range(len(FOOD_POS)):
-        aStar_search(mySnake, i, manhattanHeuristic)
-    print("astar score " + str(mySnake.score))
+    # making 20 test runs
+    for num in range(20):
+        # generating 11 randomly place obstacle positions (tuples)
+        obstacle_pos = generate_obstacles_pos(11)
+        # closing window borders
+        obstacle_pos = generate_walls(obstacle_pos)
+        # generating random food positions (for run time) saved in global variable FOOD_POS
+        foodPos(obstacle_pos)
+        # saving the obstacles and walls in snake to render and take into search calculations
+        mySnake.set_obstacles(obstacle_pos)
+        for i in range(0, len(FOOD_POS)):
+            aStar_search(mySnake, i, False)
+        scores["ucs"].append(mySnake.score)
+        print("ucs score " + str(mySnake.score))
+        # resetting snake to make another test in the same enviroment
+        mySnake.reset(START_POS)
+        for i in range(len(FOOD_POS)):
+            aStar_search(mySnake, i, False, manhattanHeuristic)
+        scores["astar"].append(mySnake.score)
+        print("astar score " + str(mySnake.score))
+        mySnake.reset(START_POS)
+    print(scores)
 
 
