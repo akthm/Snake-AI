@@ -1,24 +1,32 @@
 # from snake import *
-from snake import *
+from Snake import randomSnack,actionsList,scoreList
+import pygame
+
 from heuristics import *
-from util import *
-def aStar_search(s, i, slow,my_screen, heuristic = nullHeuristic):
-    global width, rows, snack, tempFood, startState, food
+from Util import *
+def aStar_search(s, i, slow, my_screen, heuristic,snack,tempFood,speedrun=False):
+    # global width, rows, snack, tempFood, startState, food
+
     # my_screen = screen(WINDOW_SIZE,GRID_SIZE,START_POS)
 
     def performActions(dirs, slow):
         # perform actions in the game window so we can see the results
         for action in dirs:
             if slow:
-                pygame.time.delay(50)
-                clock.tick(10)
+                # pygame.time.delay(50)
+                # clock.tick(90)
+                pass
             s.moveAuto(action)
-            my_screen.redrawWindow(s)
+            my_screen.redrawWindow(s, snack)
+    if speedrun:
+        # print(i)
+        snack.reset((i[0],i[1]), color=(0, 255, 0))
+    else:
 
-    snack.reset(randomSnack(my_screen.rows, s),color=(0, 255, 0))
+     snack.reset(randomSnack(my_screen.rows, s), color=(0, 255, 0))
 
     # tempFood = snack
-    tempFood.reset(snack.pos,snack.dirnx,snack.dirny,snack.color)
+    tempFood.reset(snack.pos, snack.dirnx, snack.dirny, snack.color)
 
     clock = pygame.time.Clock()
     flag = True
@@ -48,6 +56,6 @@ def aStar_search(s, i, slow,my_screen, heuristic = nullHeuristic):
                 if childNode not in aStar_priorityqueue.heap:
                     if childNode in visited:  # make sure child is not in visited so we don't go backwards
                         continue
-                    hCost = costs + cost + heuristic(childNode)
+                    hCost = costs + cost + heuristic(childNode,tempFood)
                     aStar_priorityqueue.push((childNode, directions + [direction], costs + cost), hCost)
 

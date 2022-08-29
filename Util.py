@@ -1,11 +1,11 @@
 # CSCI 4478 - Dr Vahid Behzadan
-# Name: util.py
+# Name: Util.py
 # Description: Useful utilities for our Snake AI
 # All credit for code goes to http://ai.berkeley.edu
 # Revision: 4/22/2021
 
 
-# util.py
+# Util.py
 # -------
 # Licensing Information:  You are free to use or extend these projects for
 # educational purposes provided that (1) you do not distribute or publish

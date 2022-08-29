@@ -3,7 +3,7 @@ import inspect
 import heapq, random
 
 
-from snake import tempFood
+# from snake import tempFood
 
 
 def manhattanDistance(xy1, xy2):
@@ -26,7 +26,7 @@ def notDefined():
 def nullHeuristic(state, problem=None):
     # trivial heuristic
     return 0
-def manhattanHeuristic(position):
+def manhattanHeuristic(position,tempFood):
     # uses distance as a score for heuristic
     xy1 = position
     xy2 = tempFood.pos

@@ -11,7 +11,10 @@ import sys
 import pygame
 import tkinter as tk
 from tkinter import messagebox
-from util import *
+from Cube import *
+
+import Astar
+from Util import *
 from Screen import *
 from heuristics import *
 
@@ -32,41 +35,6 @@ file = "results.txt"
 
 # ------------------------------------------------- Code setting up the basics of the snake game
 
-
-class cube(object):
-    rows = GRID_SIZE
-    w = WINDOW_SIZE
-
-    def __init__(self, start, dirnx=1, dirny=0, color=(255, 0, 0)):
-        self.pos = start
-        self.dirnx = 1
-        self.dirny = 0
-        self.color = color
-
-    def move(self, dirnx, dirny):
-        self.dirnx = dirnx
-        self.dirny = dirny
-        self.pos = (self.pos[0] + self.dirnx, self.pos[1] + self.dirny)
-
-    def reset(self, start, dirnx=1, dirny=0, color=(255, 0, 0)):
-        self.pos = start
-        self.dirnx = 1
-        self.dirny = 0
-        self.color = color
-
-    def draw(self, surface, eyes=False):
-        dis = self.w // self.rows
-        i = self.pos[0]
-        j = self.pos[1]
-
-        pygame.draw.rect(surface, self.color, (i * dis + 1, j * dis + 1, dis - 2, dis - 2))
-        if eyes:
-            centre = dis // 2
-            radius = 3
-            circleMiddle = (i * dis + centre - radius, j * dis + 8)
-            circleMiddle2 = (i * dis + dis - radius * 2, j * dis + 8)
-            pygame.draw.circle(surface, (0, 0, 0), circleMiddle, radius)
-            pygame.draw.circle(surface, (0, 0, 0), circleMiddle2, radius)
 
 
 class snake(object):
@@ -294,16 +262,7 @@ class snake(object):
         # print("Successors:", successors)
         return successors
 
-def randomSnack(rows, item):
-    positions = item.body
-    while True:
-        x = random.randrange(rows)
-        y = random.randrange(rows)
-        if len(list(filter(lambda z: z.pos == (x, y), positions))) > 0:
-            continue
-        else:
-            break
-    return (x, y)
+
 
 
 def message_box(subject, content):
@@ -331,11 +290,6 @@ startState = 0
 # --------------------------------------------------------------------- Running the game normally
 def main():
     global s, snack, startState
-    # width = WINDOW_SIZE
-    # rows = GRID_SIZE
-    # win = pygame.display.set_mode((width, width))
-    # startState = (10, 10)
-    # my_screen = screen(WINDOW_SIZE,GRID_SIZE,(10, 10))
     my_screen = screen(WINDOW_SIZE, GRID_SIZE, START_POS)
     # s = snake((255, 0, 0), (10, 10))
     s = snake((255, 0, 0), startState)
@@ -362,11 +316,9 @@ def main():
         if s.body[0].pos == snack.pos:
             s.addCube()
             # snack = cube(randomSnack(rows, s), color=(0, 255, 0))
-            snack.reset(randomSnack(rows, s), color=(0, 255, 0))
-
+            snack.reset(randomSnack(my_screen.rows, s), color=(0, 255, 0))
             # tempFood = food  # use this as testing to try to get food value before it changes
             tempFood.reset(food.pos, food.dirnx, food.dirny, food.color)
-
             # food = snack  # update food to new value
             food.reset(snack.pos, snack.dirnx, snack.dirny, snack.color)
 
@@ -422,68 +374,6 @@ averageCalcCosts = [[], [], [], []]
 
 # --------------------------------------------------------------------- A Star
 
-
-# s: snake object
-# i : iterator to keep track of where food will be
-# slow: True go slow False go fast
-def aStar_search(s, i, slow, my_screen, heuristic,speedrun=False):
-    global width, rows, snack, tempFood, startState, food
-
-    # my_screen = screen(WINDOW_SIZE,GRID_SIZE,START_POS)
-
-    def performActions(dirs, slow):
-        # perform actions in the game window so we can see the results
-        for action in dirs:
-            if slow:
-                # pygame.time.delay(50)
-                # clock.tick(90)
-                pass
-            s.moveAuto(action)
-            my_screen.redrawWindow(s, snack)
-    if speedrun:
-        # print(i)
-        snack.reset((i[0],i[1]), color=(0, 255, 0))
-    else:
-
-     snack.reset(randomSnack(my_screen.rows, s), color=(0, 255, 0))
-
-    # tempFood = snack
-    tempFood.reset(snack.pos, snack.dirnx, snack.dirny, snack.color)
-
-    clock = pygame.time.Clock()
-    flag = True
-
-    aStar_priorityqueue = PriorityQueue()  # fringe
-    visited = set()
-    aStar_priorityqueue.push((s.getStartState(), [], 0), 0)
-
-    while 1:
-        if aStar_priorityqueue.isEmpty():
-            break
-
-        current, directions, costs = aStar_priorityqueue.pop()  # add costs for ucs
-        # print("Current:", current)
-        if current not in visited:
-            visited.add(current)
-            if s.isGoalState(current):
-                s.score += 1
-                s.addCube()
-                performActions(directions, slow)
-                # print("A_Star number of actions:", len(directions))
-                actionsList[2].append(len(directions))
-                # print("A_Star score:", len(s.body))
-                scoreList[2] = len(s.body)
-                # scoreList[2] = s.score
-            for childNode, direction, cost in s.getSuccessors(current):
-                if childNode not in aStar_priorityqueue.heap:
-                    if childNode in visited:  # make sure child is not in visited so we don't go backwards
-                        continue
-                    hCost = costs + cost + heuristic(childNode)
-                    aStar_priorityqueue.push((childNode, directions + [direction], costs + cost), hCost)
-
-
-# --------------------------------------------------------------------- End of A Star
-
 # use main() for human gameplay
 if __name__ == '__main__':
     scores = {"astar": [], "ucs": []}
@@ -496,16 +386,15 @@ if __name__ == '__main__':
 
             mySnake.set_obstacles(my_screen.wall)
 
-            print("This is my wall ", my_screen.wall)
             for i in range(0, 400):
-                aStar_search(mySnake, i, False, my_screen, nullHeuristic)
+                Astar.aStar_search(mySnake, i, False, my_screen, nullHeuristic,snack,tempFood)
             scores["ucs"].append(mySnake.score)
             print("ucs score " + str(mySnake.score))
             mySnake.reset(START_POS)
             pygame.quit()
             my_screen = screen(WINDOW_SIZE, GRID_SIZE, START_POS, 11)
             for i in range(400):
-                aStar_search(mySnake, i, False, my_screen, manhattanHeuristic)
+                Astar.aStar_search(mySnake, i, False, my_screen, manhattanHeuristic,snack,tempFood)
             scores["astar"].append(mySnake.score)
             print("astar score " + str(mySnake.score))
             mySnake.reset(START_POS)
@@ -524,14 +413,14 @@ if __name__ == '__main__':
             my_screen = screen(WINDOW_SIZE, GRID_SIZE, START_POS, 11,walls)
             mySnake.set_obstacles(my_screen.wall)
             for i in range(len(apples)):
-                aStar_search(mySnake, apples[i], False, my_screen, nullHeuristic,True)
+                Astar.aStar_search(mySnake, apples[i], False, my_screen, nullHeuristic,snack,tempFood,True)
             scores["ucs"].append([lst[num],mySnake.score])
             print(lst[num] + " apples, ucs score " + str(mySnake.score))
             mySnake.reset(START_POS)
             pygame.quit()
             my_screen = screen(WINDOW_SIZE, GRID_SIZE, START_POS, 11,walls)
             for i in range(len(apples)):
-                aStar_search(mySnake, apples[i], False, my_screen, manhattanHeuristic,True)
+                Astar.aStar_search(mySnake, apples[i], False, my_screen, manhattanHeuristic,snack,tempFood,True)
             scores["astar"].append([lst[num],mySnake.score])
             print(lst[num]+" apples, astar score "+  str(mySnake.score))
             mySnake.reset(START_POS)
