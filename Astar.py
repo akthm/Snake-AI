@@ -6,9 +6,7 @@ from heuristics import *
 from Util import *
 def aStar_search(s, i, slow, my_screen, heuristic,snack,tempFood,speedrun=False):
     # global width, rows, snack, tempFood, startState, food
-
     # my_screen = screen(WINDOW_SIZE,GRID_SIZE,START_POS)
-
     def performActions(dirs, slow):
         # perform actions in the game window so we can see the results
         for action in dirs:
@@ -22,23 +20,15 @@ def aStar_search(s, i, slow, my_screen, heuristic,snack,tempFood,speedrun=False)
         # print(i)
         snack.reset((i[0],i[1]), color=(0, 255, 0))
     else:
-
      snack.reset(randomSnack(my_screen.rows, s), color=(0, 255, 0))
-
     # tempFood = snack
     tempFood.reset(snack.pos, snack.dirnx, snack.dirny, snack.color)
-
-    clock = pygame.time.Clock()
-    flag = True
-
     aStar_priorityqueue = PriorityQueue()  # fringe
     visited = set()
     aStar_priorityqueue.push((s.getStartState(), [], 0), 0)
-
     while 1:
         if aStar_priorityqueue.isEmpty():
             break
-
         current, directions, costs = aStar_priorityqueue.pop()  # add costs for ucs
         # print("Current:", current)
         if current not in visited:
@@ -58,4 +48,5 @@ def aStar_search(s, i, slow, my_screen, heuristic,snack,tempFood,speedrun=False)
                         continue
                     hCost = costs + cost + heuristic(childNode,tempFood)
                     aStar_priorityqueue.push((childNode, directions + [direction], costs + cost), hCost)
+    # print(hCost)
 

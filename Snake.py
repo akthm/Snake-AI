@@ -63,9 +63,7 @@ class snake(object):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
-
             keys = pygame.key.get_pressed()
-
             for key in keys:
                 # print("Head position:", self.head.pos) # lets us see grid pos for head
                 if keys[pygame.K_LEFT]:
@@ -165,7 +163,6 @@ class snake(object):
     def addCube(self):
         tail = self.body[-1]
         dx, dy = tail.dirnx, tail.dirny
-
         if dx == 1 and dy == 0:
             self.body.append(cube((tail.pos[0] - 1, tail.pos[1])))
             self.walls = self.body
@@ -383,9 +380,7 @@ if __name__ == '__main__':
             #creates a screen and initilizes the obstacles and the wall
             #11 is the number of obstacles
             my_screen = screen(WINDOW_SIZE, GRID_SIZE, START_POS, 11)
-
             mySnake.set_obstacles(my_screen.wall)
-
             for i in range(0, 400):
                 Astar.aStar_search(mySnake, i, False, my_screen, nullHeuristic,snack,tempFood)
             scores["ucs"].append(mySnake.score)
