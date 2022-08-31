@@ -1,5 +1,7 @@
 import pygame
 import random
+
+WHITE = (255, 255, 255)
 GRID_SIZE = 20
 
 WINDOW_SIZE = 500
@@ -7,41 +9,41 @@ WINDOW_SIZE = 500
 RED = (255, 0, 0)
 
 file = "results.txt"
-class screen():
-    def __init__(self,width,rows,start_state,obstacle_num=0,walls=[]):
+
+
+class Screen:
+
+    def __init__(self,width,rows,start_state,obstacle_num=0,walls=False):
         self.width = width
         self.rows = rows
         self.start = start_state
         self.obstacle_num = obstacle_num
-        if walls == []:
-            self.obs = []
-            if obstacle_num!=0:
-                self.generate_obstacles()
-            self.wall = []
+        self.obs = []
+        self.wall = []
+        self._generate_obstacles()
+        if walls:
             self.generate_walls()
-        else:
-            self.wall = walls
-            self.obs = walls
         self.win = pygame.display.set_mode((width, width))
+
     def generate_walls(self):
-        if self.obs:
-            self.wall += self.obs
-        for i in range(GRID_SIZE):
+        for i in range(self.rows):
             self.wall.append((i, 0))
             self.wall.append((0, i))
-            self.wall.append((GRID_SIZE - 1, i))
-            self.wall.append((i, GRID_SIZE - 1))
+            self.wall.append((self.rows - 1, i))
+            self.wall.append((i, self.rows - 1))
+        self.wall = list(set(self.wall))
         return self.wall
 
-
-    def generate_obstacles(self):
+    def _generate_obstacles(self):
+        available = []
+        for row in range(self.rows):
+            for col in range(self.rows):
+                if (row, col) not in self.wall:
+                    available.append((row, col))
         for i in range(self.obstacle_num):
-            x_rand = random.randrange(19)
-            y_rand = random.randrange(19)
-            self.obs.append((x_rand, y_rand))
+            self.obs.append(random.choice(available))
 
-
-    def redrawWindow(self, snake,snack):
+    def redrawWindow(self, snake, snack):
         # global rows, width, snack
         self.win.fill((0, 0, 0))
         snake.draw(self.win)
