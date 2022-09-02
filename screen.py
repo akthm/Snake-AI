@@ -1,14 +1,6 @@
 import pygame
 import random
-
-WHITE = (255, 255, 255)
-GRID_SIZE = 20
-
-WINDOW_SIZE = 500
-
-RED = (255, 0, 0)
-
-file = "results.txt"
+from cube import *
 
 
 class Screen:
@@ -20,7 +12,7 @@ class Screen:
         self.obstacle_num = obstacle_num
         self.obs = []
         self.wall = []
-        self._generate_obstacles()
+        self.generate_obstacles()
         if walls:
             self.generate_walls()
         self.win = pygame.display.set_mode((width, width))
@@ -34,7 +26,8 @@ class Screen:
         self.wall = list(set(self.wall))
         return self.wall
 
-    def _generate_obstacles(self):
+    def generate_obstacles(self):
+        self.obs = []
         available = []
         for row in range(self.rows):
             for col in range(self.rows):

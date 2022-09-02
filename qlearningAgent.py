@@ -6,6 +6,8 @@ import pygame.time
 import heuristics
 import pickle
 import numpy as np
+
+import snake
 from astar_agent import aStar_search
 
 MOVES = ("LEFT", "RIGHT", "UP", "DOWN")
@@ -54,7 +56,7 @@ class SnakeQAgent:
 
     def get_astar_action(self, state, snake):
         if random.random() < self.eps:
-            directions = aStar_search(snake, heuristics.nullHeuristic)
+            directions = aStar_search(snake, heuristics.manhattanHeuristic)
             for direction in directions:
                 return self.find_action(direction)
         return np.argmax(self.values[state])
@@ -65,15 +67,18 @@ class SnakeQAgent:
         return np.argmax(self.values[state])
 
     def read_table(self, filename):
-        with open(filename, 'rb') as file:
-            table = pickle.load(file)
-        self.values = table
+        try:
+            with open(filename, 'rb') as file:
+                table = pickle.load(file)
+            self.values = table
+        except OSError:
+            print("model file not found -> ", filename)
 
     def write_table(self, filename):
         with open(filename, 'wb') as file:
             pickle.dump(self.values, file)
 
-    def train(self, snake, screen=None):
+    def train(self, snk, screen=None):
         for i in range(1, self.num_episodes + 1):
             steps_without_food = 0
 
@@ -88,18 +93,18 @@ class SnakeQAgent:
             if (i < 500 and i % 10 == 0) or (i >= 500 and i < 1000 and i % 200 == 0) or (i >= 1000 and i % 500 == 0):
                 self.write_table(f'pickle/{i}.pickle')
 
-            current_state = get_current_state(snake)
+            current_state = get_current_state(snk)
 
             self.eps = max(self.eps * self.eps_discount, self.min_eps)
             done = False
-            snake.gen_new_food(None)
+            snk.gen_new_food()
             while not done:
                 act = self.get_action(current_state)
                 action = ["LEFT", "RIGHT", "UP", "DOWN"][act]
-                snake.next_move = action
-                reward = snake.moveAuto(action)
-                new_state = get_current_state(snake)
-
+                snk.next_move = action
+                reward = snk.moveAuto(action)
+                new_state = get_current_state(snk)
+                # Bellmann equation
                 self.values[current_state][act] = (1 - self.learning_rate) \
                                                     * self.values[current_state][act] + self.learning_rate \
                                                     * (reward + self.discount_rate * max(self.values[new_state]))
@@ -107,19 +112,19 @@ class SnakeQAgent:
                 steps_without_food += 1
                 if reward == 1:
                     steps_without_food = 0
-                    snake.addCube()
-                    snake.score += 1
-                    snake.gen_new_food(None)
+                    snk.addCube()
+                    snk.score += 1
+                    snk.gen_new_food(None)
 
                 elif reward == -10:
                     done = True
 
                 if steps_without_food == 1000:
                     break
-            if screen:
-                pygame.time.delay(40)
-                screen.redrawWindow(snake, snake.tmpFood)
-            self.score.append(snake.score)
-            self.survived.append(not snake.is_terminated())
-            snake.reset(snake.START_POS)
-            snake.gen_new_food()
+                if screen:
+                    pygame.time.delay(30)
+                    screen.redrawWindow(snk, snk.tmpFood)
+            self.score.append(snk.score)
+            self.survived.append(not snk.is_terminated())
+            snk.reset(snake.START_POS)
+            snk.gen_new_food()

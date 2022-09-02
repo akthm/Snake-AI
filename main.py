@@ -1,6 +1,10 @@
 from argparse import ArgumentParser, FileType
 import sys
+
+import pygame.time
+
 import snake
+import time
 from screen import *
 import heuristics
 from astar_agent import aStar_search
@@ -8,11 +12,11 @@ from hamiltonian import HamiltonianAgent
 from snake import *
 from qlearningAgent import SnakeQAgent, get_current_state
 from cube import *
+import numpy as np
 
+DEFAULT_MODEL = "100000.pickle"
 
 DELAY = 20
-GRID_SIZE = 20
-
 
 
 def parse_command_line_args(args):
@@ -51,8 +55,17 @@ def parse_command_line_args(args):
         default=1,
         help='The number of episodes to run consecutively.',
     )
-    parser.add_argument('--apples', nargs=1,  type=FileType('r'),
+
+    parser.add_argument('--apples',
+                        nargs=1,
+                        type=FileType('r'),
                         help='insert apples locations using a file')
+
+    parser.add_argument('--model',
+                        type=str,
+                        default=DEFAULT_MODEL,
+                        help='q-learning model file (pickle)')
+
     parser.add_argument(
         '--ob',
         required=False,
@@ -67,39 +80,88 @@ def parse_command_line_args(args):
         action='store_true',
         help='Add walls',
     )
+    parser.add_argument(
+        '-t',
+        required=False,
+        action='store_true',
+        help='train q-agent',
+    )
     return parser.parse_args(args)
 
 
-def performActions(dirs, snk, screen, clock):
+def play_human(snk, screen):
+    my_screen = screen
+    if not my_screen:
+        print("ERROR: human should be played with gui")
+        exit(1)
+    s = snk
+    # snack = cube(randomSnack(rows, s), color=(0, 255, 0))
+
+    # tempFood = snack
+
+    flag = True
+    snk.gen_new_food()
+    t0 = time.process_time()
+
+    while flag:
+        # for index, position in enumerate(s.walls):  # we can use this to see current walls (basically our body)
+        #     print("Walls:", position.pos)
+        pygame.time.delay(DELAY)
+        s.move()
+        if s.isGoalState(s.head.pos):
+            s.score += 1
+            s.addCube()
+            snk.gen_new_food()
+        if s.is_terminated():
+            print('Score:', len(s.body))
+            message_box("u die'd", "dead")
+            s.reset((10, 10))
+            break
+
+        my_screen.redrawWindow(s, s.tmpFood)
+    t1 = time.process_time()
+    return s.score, t1 - t0
+
+
+def performActions(dirs, snk, screen):
     # perform actions in the game window so we can see the results
     for action in dirs:
         snk.moveAuto(action)
+
+        snk.next_move = action
+
         if snk.isGoalState(snk.head.pos):
             snk.addCube()
             snk.score += 1
             break
         pygame.time.delay(DELAY)
-        clock.tick(60)
-        screen.redrawWindow(snk, snk.tmpFood)
+        if screen:
+            screen.redrawWindow(snk, snk.tmpFood)
 
 
 def run_Astar(snk, screen, heuristic):
-    clock = pygame.time.Clock()
-    screen.redrawWindow(snk, snk.tmpFood)
-    for i in range(snk.num_of_apples):
+    t0 = time.process_time()
+    snk.gen_new_food()
+    if screen:
+        screen.redrawWindow(snk, snk.tmpFood)
+    i = 0
+    while i < snk.num_of_apples and not snk.is_terminated():
         directions = aStar_search(snk, heuristic)
-        performActions(directions, snk, screen, clock)
+        performActions(directions, snk, screen)
+        snk.gen_new_food()
+        i += 1
+    t1 = time.process_time()
+    return snk.score,  t1 - t0
 
-    return snk.score, clock.get_time()
 
-
-def run_qlearning(snk, scn):
-    clock = pygame.time.Clock()
+def run_qlearning(snk, scn, model_file):
     agent = SnakeQAgent(eps=0.001)
     snk.gen_new_food()
-    agent.read_table("pickle/99500.pickle")  # latest model
+    agent.read_table(model_file)  # latest model
+    last_act = ""
     current_length = snk.score + 1
     steps_unchanged = 0
+    t0 = time.process_time()
     while not snk.is_terminated():
         pygame.time.delay(DELAY)
         if current_length != snk.score + 1:
@@ -109,11 +171,12 @@ def run_qlearning(snk, scn):
             steps_unchanged += 1
 
         state = get_current_state(snk)
-        act = agent.get_action(state)
+        act = np.argmax(agent.values[state])
         if steps_unchanged == 1000:
             break
         action = ["LEFT", "RIGHT", "UP", "DOWN"][act]
         snk.next_move = action
+        last_act = action
         reward = snk.moveAuto(action)
 
         if reward == 1:
@@ -124,25 +187,17 @@ def run_qlearning(snk, scn):
         elif reward == -10:
             print("snake dies at " + str(snk.head.pos))
             pass
-
-        scn.redrawWindow(snk, snk.tmpFood)
-        clock.tick(90)
-    return snk.score, clock.get_time()
+        if scn:
+            scn.redrawWindow(snk, snk.tmpFood)
+    t1 = time.process_time()
+    return snk.score, t1 - t0
 
 
 def runHamiltonian(snk, scn):
-    agent = HamiltonianAgent(scn.rows // 2 - 1, scn.rows // 2 - 1)
-    clock = pygame.time.Clock()
+    agent = HamiltonianAgent(GRID_SIZE // 2 - 1, GRID_SIZE // 2 - 1)
     steps_with_no_food = 0
-    i = 0
     snk.gen_new_food()
-    # if apples:
-    #     snack.reset((apples[i][0],apples[i][1]), color=(0, 255, 0))
-    #     # tempFood = snack
-    # else:
-    #     snack.reset(randomSnack(scn.rows, snk, scn.getWalls(), scn.getObstacles()), color=(0, 255, 0))
-    # tempFood.reset(snack.pos, snack.dirnx, snack.dirny, snack.color)
-
+    t0 = time.process_time()
     while not snk.is_terminated():
         agent.next_move(snk)
         move = agent.get_direction()
@@ -153,16 +208,6 @@ def runHamiltonian(snk, scn):
         if snk.is_terminated():
             agent.reward(move, -1000)
         elif snk.isGoalState(snk.head.pos):
-            # if apples:
-            #     i+=1
-            #     if i >= len(apples):
-            #         break
-            #     else:
-            #         snack.reset((apples[i][0],apples[i][1]), color=(0, 255, 0))
-            # else:
-            #     snack.reset(randomSnack(scn.rows, snk, scn.getWalls(), scn.getObstacles()), color=(0, 255, 0))
-            # # tempFood = snack
-            # tempFood.reset(snack.pos, snack.dirnx, snack.dirny, snack.color)
             snk.gen_new_food()
             snk.score += 1
             snk.addCube()
@@ -172,9 +217,16 @@ def runHamiltonian(snk, scn):
             agent.reward(move, -20, after_hit=False)
         if steps_with_no_food > 1000:
             break
-        scn.redrawWindow(snk, snk.tmpFood)
-        clock.tick(60)
-    return snk.score, clock.get_time()
+        if scn:
+            scn.redrawWindow(snk, snk.tmpFood)
+        pygame.time.delay(DELAY)
+    t1 = time.process_time()
+    return snk.score, t1 - t0
+
+
+def train_q_learning(snk, scn, num_episodes):
+    agent = SnakeQAgent(discount_rate=0.78, num_episodes=num_episodes)
+    agent.train(snk, scn)
 
 
 def main():
@@ -194,28 +246,43 @@ def main():
     agent = parsed_args.agent
     scores = []
     times = []
+    if parsed_args.t:
+        train_q_learning(mysnake, myscreen, parsed_args.num_episodes)
+        exit()
     for i in range(1, parsed_args.num_episodes + 1):
         score = 0
-        time = 0.0
+        timer = 0.0
         if agent == "human":
-            snake.main()
+            score, timer = play_human(mysnake, myscreen)
         elif agent == "astar":
             heuris = heuristics.nullHeuristic if parsed_args.heuristic == 'null' else heuristics.manhattanHeuristic
-            score, time = run_Astar(mysnake, myscreen, heuris)
+            score, timer = run_Astar(mysnake, myscreen, heuris)
         elif agent == "q-learning":
-            score, time = run_qlearning(mysnake, myscreen)
+            score, timer = run_qlearning(mysnake, myscreen, parsed_args.model)
         elif agent == "hamilton":
             if not parsed_args.w:
                 myscreen.generate_walls()
-                mysnake.set_obstacles(myscreen.wall)
+                mysnake.set_obstacles(myscreen.wall + myscreen.obs)
             if parsed_args.ob:
                 raise ValueError("Hamiltonian cannot work with obstacles")
-            score, time = runHamiltonian(mysnake, myscreen)
-        times.append(time)
+            score, timer = runHamiltonian(mysnake, myscreen)
+        times.append(timer)
         scores.append(score)
         mysnake.reset(START_POS)
-    print(times)  # todo check time measurement currently not correct
+        myscreen.generate_obstacles()
+        mysnake.set_obstacles(myscreen.obs)
+        if apples:
+            line = (parsed_args.apples[0]).readline()
+            try:
+                apples = eval(line)
+                mysnake.update_apples(apples)
+            except SyntaxError:
+                break
+
+    print(times)
+    print("average timer :",  np.mean(times))
     print(scores)
+    print("average score :", np.mean(scores))
 
 
 if __name__ == '__main__':
