@@ -6,7 +6,7 @@ import pygame.time
 import snake
 import time
 from screen import *
-import heuristics
+from heuristics import *
 from astar_agent import aStar_search
 from hamiltonian import HamiltonianAgent
 from snake import *
@@ -18,6 +18,7 @@ DEFAULT_MODEL = "100000.pickle"
 
 DELAY = 20
 
+COST_MAPPER = {'normal': normal_cost, 'euclidean': euclideanCost}
 
 def parse_command_line_args(args):
     """ Parse command-line arguments and organize them into a single structured object. """
@@ -48,6 +49,14 @@ def parse_command_line_args(args):
         type=str,
         default='manhattan',
         help='Heuristic to use in A*.',
+    )
+    parser.add_argument(
+        '--cost',
+        required=False,
+        choices=['normal', 'euclidean'],
+        type=str,
+        default='normal',
+        help='cost func to use in A*.',
     )
     parser.add_argument(
         '--num_episodes',
@@ -139,14 +148,14 @@ def performActions(dirs, snk, screen):
             screen.redrawWindow(snk, snk.tmpFood)
 
 
-def run_Astar(snk, screen, heuristic):
+def run_Astar(snk, screen, heuristic, cost):
     t0 = time.process_time()
     snk.gen_new_food()
     if screen:
         screen.redrawWindow(snk, snk.tmpFood)
     i = 0
     while i < snk.num_of_apples and not snk.is_terminated():
-        directions = aStar_search(snk, heuristic)
+        directions = aStar_search(snk, heuristic, cost)
         performActions(directions, snk, screen)
         snk.gen_new_food()
         i += 1
@@ -255,8 +264,8 @@ def main():
         if agent == "human":
             score, timer = play_human(mysnake, myscreen)
         elif agent == "astar":
-            heuris = heuristics.nullHeuristic if parsed_args.heuristic == 'null' else heuristics.manhattanHeuristic
-            score, timer = run_Astar(mysnake, myscreen, heuris)
+            heuris = nullHeuristic if parsed_args.heuristic == 'null' else manhattanHeuristic
+            score, timer = run_Astar(mysnake, myscreen, heuris, COST_MAPPER[parsed_args.cost])
         elif agent == "q-learning":
             score, timer = run_qlearning(mysnake, myscreen, parsed_args.model)
         elif agent == "hamilton":
