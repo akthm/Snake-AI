@@ -2,13 +2,12 @@
 import random
 
 import pygame.time
-
 import heuristics
 import pickle
 import numpy as np
-
 import snake
 from astar_agent import aStar_search
+
 
 MOVES = ("LEFT", "RIGHT", "UP", "DOWN")
 

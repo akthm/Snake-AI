@@ -13,12 +13,14 @@ from snake import *
 from qlearningAgent import SnakeQAgent, get_current_state
 from cube import *
 import numpy as np
+from snake_state import SnakeState
 
 DEFAULT_MODEL = "100000.pickle"
 
-DELAY = 20
+DELAY = 70
 
 COST_MAPPER = {'normal': normal_cost, 'euclidean': euclideanCost}
+
 
 def parse_command_line_args(args):
     """ Parse command-line arguments and organize them into a single structured object. """
@@ -142,7 +144,7 @@ def performActions(dirs, snk, screen):
         if snk.isGoalState(snk.head.pos):
             snk.addCube()
             snk.score += 1
-            break
+
         pygame.time.delay(DELAY)
         if screen:
             screen.redrawWindow(snk, snk.tmpFood)
@@ -245,41 +247,41 @@ def main():
     else:
         apples = None
     mysnake = Snake(RED, START_POS, apples)
-    myscreen = None
+    obs_num = parsed_args.ob
+    walls = parsed_args.w
+    myscreen = Screen(WINDOW_SIZE, GRID_SIZE, START_POS, obs_num, walls)
+    mysnake.set_obstacles(myscreen.obs + myscreen.wall)
+    tmpscreen = None
     if parsed_args.interface == "gui":
-        obs_num = parsed_args.ob
-        walls = parsed_args.w
-        myscreen = Screen(WINDOW_SIZE, GRID_SIZE, START_POS, obs_num, walls)
-        mysnake.set_obstacles(myscreen.obs + myscreen.wall)
-
+        tmpscreen = myscreen
     agent = parsed_args.agent
     scores = []
     times = []
     if parsed_args.t:
-        train_q_learning(mysnake, myscreen, parsed_args.num_episodes)
+        train_q_learning(mysnake, tmpscreen, parsed_args.num_episodes)
         exit()
     for i in range(1, parsed_args.num_episodes + 1):
         score = 0
         timer = 0.0
         if agent == "human":
-            score, timer = play_human(mysnake, myscreen)
+            score, timer = play_human(mysnake, tmpscreen)
         elif agent == "astar":
             heuris = nullHeuristic if parsed_args.heuristic == 'null' else manhattanHeuristic
-            score, timer = run_Astar(mysnake, myscreen, heuris, COST_MAPPER[parsed_args.cost])
+            score, timer = run_Astar(mysnake, tmpscreen, heuris, COST_MAPPER[parsed_args.cost])
         elif agent == "q-learning":
-            score, timer = run_qlearning(mysnake, myscreen, parsed_args.model)
+            score, timer = run_qlearning(mysnake, tmpscreen, parsed_args.model)
         elif agent == "hamilton":
             if not parsed_args.w:
                 myscreen.generate_walls()
                 mysnake.set_obstacles(myscreen.wall + myscreen.obs)
             if parsed_args.ob:
                 raise ValueError("Hamiltonian cannot work with obstacles")
-            score, timer = runHamiltonian(mysnake, myscreen)
+            score, timer = runHamiltonian(mysnake, tmpscreen)
         times.append(timer)
         scores.append(score)
         mysnake.reset(START_POS)
         myscreen.generate_obstacles()
-        mysnake.set_obstacles(myscreen.obs)
+        mysnake.set_obstacles(myscreen.obs + myscreen.wall)
         if apples:
             line = (parsed_args.apples[0]).readline()
             try:

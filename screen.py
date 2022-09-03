@@ -5,7 +5,7 @@ from cube import *
 
 class Screen:
 
-    def __init__(self,width,rows,start_state,obstacle_num=0,walls=False):
+    def __init__(self, width, rows, start_state, obstacle_num=0, walls=False):
         self.width = width
         self.rows = rows
         self.start = start_state

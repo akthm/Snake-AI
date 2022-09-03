@@ -19,21 +19,20 @@ class cube(object):
     rows = GRID_SIZE
     w = WINDOW_SIZE
 
-    def __init__(self, start, dirnx=1, dirny=0, color=(255, 0, 0)):
+    def __init__(self, start, dirnx=0, dirny=0, color=(255, 0, 0)):
         self.pos = start
-        self.dirnx = 1
+        self.dirnx = 0
         self.dirny = 0
         self.color = color
 
     def move(self, dirnx, dirny):
-        self.dirnx = dirnx
-        self.dirny = dirny
-        pos_x = self.pos[0] + self.dirnx
+
+        pos_x = self.pos[0] + dirnx
         if pos_x == -1:
             pos_x = GRID_SIZE - 1
         elif pos_x == GRID_SIZE:
             pos_x = 0
-        pos_y = self.pos[1] + self.dirny
+        pos_y = self.pos[1] + dirny
         if pos_y == -1:
             pos_y = GRID_SIZE - 1
         elif pos_y == GRID_SIZE:
@@ -42,7 +41,7 @@ class cube(object):
 
     def reset(self, start, dirnx=1, dirny=0, color=(255, 0, 0)):
         self.pos = start
-        self.dirnx = 1
+        self.dirnx = 0
         self.dirny = 0
         self.color = color
 
@@ -77,17 +76,3 @@ def randomSnack(rows, snake):
     return random.choice(available)
 
 
-# def randomSnack(rows, item, walls, obs):
-#     positions = item.body
-#     while True:
-#         x = random.randrange(rows)
-#         y = random.randrange(rows)
-#         if len(list(filter(lambda z: z.pos == (x, y), positions))) > 0:
-#             continue
-#         if len(list(filter(lambda z: z == (x, y), walls))) > 0:
-#             continue
-#         if len(list(filter(lambda z: z == (x, y), obs))) > 0:
-#             continue
-#         else:
-#             break
-#     return (x, y)
